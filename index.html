@@ -1,2 +1,51 @@
-<h1> Hello! welcome to my Devops website </h1>
-<h1>hi my name is ashish prajapati </h1>
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('Ashish99-as')     // Jenkins credentials ID
+        DOCKERHUB_USER = "chutiya23"                          // DockerHub username
+        IMAGE_NAME = "single-angular-app"
+        IMAGE_TAG = "latest"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Ashish99-as/ashish.test.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG ."
+            }
+        }
+
+        stage('Login to DockerHub') {
+            steps {
+                sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh "docker push $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG"
+            }
+        }
+
+        stage('Remove Local Image') {
+            steps {
+                sh "docker rmi $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG"
+            }
+        }
+
+        stage('Pull and Run Container') {
+            steps {
+                sh """
+                    docker pull $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
+                    docker run -d --name ${IMAGE_NAME}_container -p 8080:8080 $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
+                """
+            }
+        }
+    }
+}
